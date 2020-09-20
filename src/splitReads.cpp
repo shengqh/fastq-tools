@@ -16,167 +16,132 @@ string fixfilenum(int filenum)
 {
 	string out;
 	ostringstream convert;
-	if (filenum > 10)
+	if (filenum >= 100)
 	{
 		convert << filenum;
 		out = convert.str();
 	}
-	else
+	else if(filenum >= 10)
 	{
 		convert << filenum;
 		out = "0" + convert.str();
 	}
+	else
+	{
+		convert << filenum;
+		out = "00" + convert.str();
+	}
 	return out;
 }
 
-//http://stackoverflow.com/questions/3071665/getting-a-directory-name-from-a-filename
-void SplitFilename (const string& str, string &samplename, string &filepath)
-{
-  size_t found;
-  cout << "Splitting: " << str << endl;
-  found=str.find_last_of("/\\");
-  filepath = str.substr(0,found);
-  samplename =  str.substr(found+1);
-}
-
-void splitFastq(char *fqFile, string filePrefix, int recordNum, int gz)
+void splitFastq(char *fqFile, string filePrefix, int recordNum, string suffix)
 {
 	// open fastq file for kseq parsing
 	cerr << "From " << fqFile << "...." << endl;
 	cerr << "Splitting " << recordNum << " records per file" << endl;
 	int maxLine = recordNum * 4;
 	int lineCount = 0, filenum = 1;
-	string samplename = "";
-	string filepath = "";
-	SplitFilename(filePrefix, samplename, filepath);
 
-	string suffix;
 	string filename;
+
 	igzstream in(fqFile);
-
-	if (gz == 0)
+	ogzstream outFile;
+	for (string line; getline(in,line);)
 	{
-		suffix = ".fastq";
-		ofstream outFile;
-		for (string line; getline(in,line);)
+		if (lineCount == 0)
 		{
-			if (lineCount == 0)
-			{
-				filename = filepath + "/" + fixfilenum(filenum) +  "-" + samplename  + suffix;
-				outFile.open(filename.c_str());
-				outFile << line << '\n';
-			}
-			else if (lineCount == maxLine)
-			{
-				outFile.close();
-				cerr << "written " << filename << endl;
-				lineCount = 0;
-				filenum ++;
-				filename = filepath + "/" + fixfilenum(filenum) +  "-" + samplename  + suffix;
-				outFile.open(filename.c_str());
-				outFile << line << '\n';
-			}
-			else
-			{
-				outFile << line << '\n';
-			}
-			lineCount ++;
+			filename = filePrefix + "." + fixfilenum(filenum) + suffix;
+			cerr << "writing " << filename << " ..." << endl;
+			outFile.open(filename.c_str());
+			outFile << line << '\n';
 		}
-		outFile.close();
-	}
-	else
-	{
-		suffix = ".fastq.gz";
-		ogzstream outFile;
-		for (string line; getline(in,line);)
+		else if (lineCount == maxLine)
 		{
-			if (lineCount == 0)
-			{
-				filename = filepath + "/" + fixfilenum(filenum) +  "-" + samplename  + suffix;
-				outFile.open(filename.c_str());
-				outFile << line << '\n';
-			}
-			else if (lineCount == maxLine)
-			{
-				outFile.close();
-				cerr << "written " << filename << endl;
-				lineCount = 0;
-				filenum ++;
-				filename = filepath + "/" + fixfilenum(filenum) +  "-" + samplename  + suffix;
-				outFile.open(filename.c_str());
-				outFile << line << '\n';
-			}
-			else
-			{
-				outFile << line << '\n';
-			}
-			lineCount ++;
+			outFile.close();
+			lineCount = 0;
+			filenum ++;
+			filename = filePrefix + "." + fixfilenum(filenum) + suffix;
+			cerr << "writing " << filename << " ..." << endl;
+			outFile.open(filename.c_str());
+			outFile << line << '\n';
 		}
-		outFile.close();
+		else
+		{
+			outFile << line << '\n';
+		}
+		lineCount ++;
 	}
+	outFile.close();
 
-	cerr << "written " << filename << endl;
+	cerr << "done." << endl;
 }
 
 // print usage
 void usage(string programname)
 {
-	cerr << "usage: "<< programname << " -i <fqfile> -n <# of record per file> -o <prefix> [-z]" << endl;
+	cerr << "usage: "<< programname << " -i <fqfile> -n <# of record per file> -o <prefix> -s <suffix>" << endl;
 	cerr << "[options]" << endl;
 	cerr << "-i    <fastq file>"  << endl;
 	cerr << "-n    <number of record in each splitted file> default: 10000000"  << endl;
 	cerr << "-o    <prefix>"  << endl;
-	cerr << "-z    optional: gzip output"  << endl;
+	cerr << "-s    <suffix>"  << endl;
 }
 
 // main function
 int main(int argc, char **argv){
 	char *fqFile;
 	int c, recordNum = 10000000;
-	int gz = 0;
 
 	string programname = argv[0];
-	string filePrefix = "";
 	if (argc == 1){
 		usage(programname);
 		return 1;
 	}
+	string filePrefix = "";
+	string suffix = "";
 
 	opterr = 0;
 	// print usage if not enough argumnets
-	while ((c = getopt(argc, argv, "i:n:o:z")) != -1){
+	while ((c = getopt(argc, argv, "i:n:o:s:z")) != -1){
 		switch (c){
 			case 'i':
 				fqFile = optarg;
+				cerr << "i=" << fqFile << endl;
 				break;
 			case 'n':
 				recordNum = atoi(optarg);
+				cerr << "n=" << recordNum << endl;
 				break;
 			case 'o':
 				filePrefix = optarg;
+				cerr << "o=" << filePrefix << endl;
 				break;
-			case 'z':
-				gz = 1;
+			case 's':
+				suffix = optarg;
+				cerr << "s=" << suffix << endl;
 				break;
 			case '?':
-				if (optopt == 'n' || optopt == 'i' || optopt== 'o'){
-					cerr << "option n, i, p need arguments!" << endl;
+  			cerr << "???" << endl;
+				if (optopt == 'n' || optopt == 'i' || optopt== 'o' || optopt == 's'){
+					cerr << "option n, i, o, s need arguments!" << endl;
 					usage(programname);
 				}
 				else {
+					cerr << "error" << endl;
 					usage(programname);
 				}
 				return 1;
 			default:
+  			cerr << "???" << endl;
 				abort();
 		}
-    }
-	if (filePrefix == "" || strcmp(fqFile,"") == 0)
+  }
+	if (filePrefix == "" || strcmp(fqFile,"") == 0 || suffix == "")
 	{
 		usage(programname);
 		return 1;
 	}
 
-	splitFastq(fqFile, filePrefix, recordNum, gz);
+	splitFastq(fqFile, filePrefix, recordNum, suffix);
 	return 0;
 }

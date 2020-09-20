@@ -1,0 +1,4 @@
+bin/filterFastq
+bin/filterFastqC
+bin/sam2fastq
+bin/splitFastq
