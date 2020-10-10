@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stdlib.h>
 #include <cstdlib>
+#include <time.h> 
 
 using namespace std;
 //get the id hash table and
@@ -42,6 +43,8 @@ void splitFastq(char *fqFile, string filePrefix, int recordNum, string suffix)
 	int maxLine = recordNum * 4;
 	int lineCount = 0, filenum = 1;
 
+	time_t my_time; 
+	char* dt;
 	string filename;
 
 	igzstream in(fqFile);
@@ -51,7 +54,9 @@ void splitFastq(char *fqFile, string filePrefix, int recordNum, string suffix)
 		if (lineCount == 0)
 		{
 			filename = filePrefix + "." + fixfilenum(filenum) + suffix;
-			cerr << "writing " << filename << " ..." << endl;
+			my_time = time(NULL); 
+			dt = ctime(&my_time);
+			cerr << dt << "  writing " << filename << " ..." << endl;
 			outFile.open(filename.c_str());
 			outFile << line << '\n';
 		}
@@ -61,7 +66,9 @@ void splitFastq(char *fqFile, string filePrefix, int recordNum, string suffix)
 			lineCount = 0;
 			filenum ++;
 			filename = filePrefix + "." + fixfilenum(filenum) + suffix;
-			cerr << "writing " << filename << " ..." << endl;
+			my_time = time(NULL); 
+			dt = ctime(&my_time);
+			cerr << dt << "  writing " << filename << " ..." << endl;
 			outFile.open(filename.c_str());
 			outFile << line << '\n';
 		}
@@ -73,7 +80,9 @@ void splitFastq(char *fqFile, string filePrefix, int recordNum, string suffix)
 	}
 	outFile.close();
 
-	cerr << "done." << endl;
+  my_time = time(NULL); 
+	dt = ctime(&my_time);
+	cerr << dt << "  done." << endl;
 }
 
 // print usage
@@ -82,7 +91,7 @@ void usage(string programname)
 	cerr << "usage: "<< programname << " -i <fqfile> -n <# of record per file> -o <prefix> -s <suffix>" << endl;
 	cerr << "[options]" << endl;
 	cerr << "-i    <fastq file>"  << endl;
-	cerr << "-n    <number of record in each splitted file> default: 10000000"  << endl;
+	cerr << "-n    <number of record in each splitted file> default: 5000000"  << endl;
 	cerr << "-o    <prefix>"  << endl;
 	cerr << "-s    <suffix>"  << endl;
 }
@@ -90,7 +99,7 @@ void usage(string programname)
 // main function
 int main(int argc, char **argv){
 	char *fqFile;
-	int c, recordNum = 10000000;
+	int c, recordNum = 5000000;
 
 	string programname = argv[0];
 	if (argc == 1){
